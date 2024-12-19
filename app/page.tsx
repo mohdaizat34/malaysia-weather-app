@@ -1,101 +1,168 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useEffect } from "react";
+import axios from "axios";
+import { AppleCardsCarouselDemo } from "./CarouselCard";
+
+interface Location {
+  location_id: string;
+  location_name: string;
+}
+
+interface ForecastData {
+  location: Location;
+  date: string;
+  morning_forecast: string;
+  afternoon_forecast: string;
+  night_forecast: string;
+  summary_forecast: string;
+  summary_when: string;
+  min_temp: number;
+  max_temp: number;
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [locationType, setLocationType] = useState<string>("St");
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState<string>("");
+  const [forecast, setForecast] = useState<ForecastData[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+  // Fetch locations based on selected location type
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        console.log("Fetching locations with type:", locationType);
+        const response = await axios.get(
+          `https://api.data.gov.my/weather/forecast?contains=${locationType}@location__location_id`
+        );
+        const fetchedLocations = Array.isArray(response.data)
+          ? response.data
+          : [];
+
+        const uniqueLocations = Array.from(
+          new Map(
+            fetchedLocations.map((forecast: ForecastData) => [
+              forecast.location.location_id,
+              forecast.location,
+            ])
+          ).values()
+        );
+
+        setLocations(uniqueLocations);
+      } catch (err) {
+        console.error("Error fetching locations:", err);
+        setError("Failed to fetch locations.");
+      }
+    };
+
+    fetchLocations();
+  }, [locationType]);
+
+  // Fetch forecast data for selected location
+  const fetchForecast = async () => {
+    if (!selectedLocation) {
+      setError("Please select a location.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      console.log("Fetching forecast for location:", selectedLocation);
+      const query = `${selectedLocation}@location__location_id`;
+
+      const response = await axios.get(
+        `https://api.data.gov.my/weather/forecast?contains=${query}`
+      );
+      const forecastData = response.data;
+
+      // Filter forecast data to remove duplicates based on location_id and date
+      const filteredForecastData = forecastData.filter(
+        (value: ForecastData, index: number, self: ForecastData[]) =>
+          index ===
+          self.findIndex(
+            (t) =>
+              t.location.location_id === value.location.location_id &&
+              t.date === value.date
+          )
+      );
+
+      setForecast(filteredForecastData);
+    } catch (err) {
+      console.error("Error fetching forecast:", err);
+      setError("Unable to fetch forecast data.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    fetchForecast();
+  };
+
+  return (
+    <div className="flex flex-col items-center p-6 bg-gray-900 min-h-screen text-white">
+      <h1 className="text-4xl font-semibold mb-8">Malaysian Weather App</h1>
+
+      {/* Location Type Selector */}
+      <div className="mb-6 w-full max-w-xs">
+        <label htmlFor="location-type" className="block text-sm mb-2">
+          Filter by Location Type:
+        </label>
+        <select
+          id="location-type"
+          value={locationType}
+          onChange={(e) => setLocationType(e.target.value)}
+          className="w-full px-4 py-2 bg-gray-800 text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+          <option value="St">State</option>
+          <option value="Rc">Recreation Centre</option>
+          <option value="Ds">District</option>
+          <option value="Tn">Town</option>
+          <option value="Dv">Division</option>
+        </select>
+      </div>
+
+      {/* Location Selector */}
+      <form
+        onSubmit={handleSubmit}
+        className="flex items-center gap-4 mb-8 w-full max-w-xs"
+      >
+        <select
+          value={selectedLocation}
+          onChange={(e) => setSelectedLocation(e.target.value)}
+          className="w-full px-4 py-2 bg-gray-800 text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+          <option value="">Select a location</option>
+          {locations.map((location) => (
+            <option key={location.location_id} value={location.location_id}>
+              {location.location_name}
+            </option>
+          ))}
+        </select>
+
+        <button
+          type="submit"
+          className="w-full px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500"
         >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          Get Forecast
+        </button>
+      </form>
+
+      {/* Loading State */}
+      {loading && <p className="text-blue-500">Loading...</p>}
+
+      {/* Error Messages */}
+      {error && <p className="text-red-400">{error}</p>}
+
+      {/* Render the Carousel with forecast data */}
+      <div className="w-full p-0 m-0">
+        <AppleCardsCarouselDemo forecast={forecast} />
+      </div>
     </div>
   );
 }
