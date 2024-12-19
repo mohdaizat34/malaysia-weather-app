@@ -106,7 +106,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col items-center p-6 bg-gray-900 min-h-screen text-white">
-      <h1 className="text-4xl font-semibold mb-8">Malaysian Weather App</h1>
+      <h1 className="text-4xl font-semibold mb-8">Malaysia Weather Forecast</h1>
 
       {/* Location Type Selector */}
       <div className="mb-6 w-full max-w-xs">
