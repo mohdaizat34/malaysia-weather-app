@@ -211,7 +211,15 @@ export const Card = ({
               >
                 {card.title}
               </motion.p>
-              <div className="py-10">{card.content}</div>
+
+              <motion.p
+                layoutId={layout ? `title-${card.content}` : undefined}
+                className="text-lg md:text-lg  text-neutral-700 mt-4 dark:text-white"
+              >
+                <div className="mt-5">
+                  <p>{card.content}</p>
+                </div>
+              </motion.p>
             </motion.div>
           </div>
         )}

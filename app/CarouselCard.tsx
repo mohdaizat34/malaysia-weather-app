@@ -37,9 +37,6 @@ export const AppleCardsCarouselDemo: React.FC<AppleCardsCarouselDemoProps> = ({
               <p>
                 <strong>Max Temp:</strong> {forecastItem.max_temp}°C
               </p>
-              <p>
-                <strong>Summary:</strong> {forecastItem.summary_forecast}
-              </p>
             </div>
           ),
           src: imageSrc,
