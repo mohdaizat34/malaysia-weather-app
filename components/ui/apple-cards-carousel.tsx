@@ -15,11 +15,9 @@ import {
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import Image, { ImageProps } from "next/image";
-import { useOutsideClick } from "@/hooks/use-outside-click";
 
 interface CarouselProps {
   items: JSX.Element[];
-  initialScroll?: number;
 }
 
 type Card = {
@@ -31,36 +29,21 @@ type Card = {
 
 export const CarouselContext = createContext<{
   onCardClose: (index: number) => void;
-  currentIndex: number;
 }>({
   onCardClose: () => {},
-  currentIndex: 0,
 });
 
-export const Carousel = ({ items, initialScroll = 0 }: CarouselProps) => {
+export const Carousel = ({ items }: CarouselProps) => {
   const carouselRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
-  const [currentIndex, setCurrentIndex] = useState(1); // Start at second card (index 1)
 
   useEffect(() => {
     if (carouselRef.current) {
       const cardWidth = isMobile() ? 230 : 384; // Adjust for card width
       const gap = isMobile() ? 4 : 8; // Adjust for gap
       const initialPosition = (cardWidth + gap) * 1; // Always scroll to second card (index 1)
-      setCurrentIndex(1); // Set index to 1 after component mount
       carouselRef.current.scrollLeft = initialPosition;
-      checkScrollability();
     }
-  }, [items]); // Trigger whenever items change or after the first render]);
-
-  const checkScrollability = () => {
-    if (carouselRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = carouselRef.current;
-      setCanScrollLeft(scrollLeft > 0);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth);
-    }
-  };
+  }, [items]);
 
   const scrollLeft = () => {
     if (carouselRef.current) {
@@ -83,7 +66,6 @@ export const Carousel = ({ items, initialScroll = 0 }: CarouselProps) => {
         left: scrollPosition,
         behavior: "smooth",
       });
-      setCurrentIndex(index);
     }
   };
 
@@ -92,14 +74,11 @@ export const Carousel = ({ items, initialScroll = 0 }: CarouselProps) => {
   };
 
   return (
-    <CarouselContext.Provider
-      value={{ onCardClose: handleCardClose, currentIndex }}
-    >
+    <CarouselContext.Provider value={{ onCardClose: handleCardClose }}>
       <div className="relative w-full">
         <div
           className="flex w-full overflow-x-scroll overscroll-x-auto py-10 md:py-20 scroll-smooth [scrollbar-width:none]"
           ref={carouselRef}
-          onScroll={checkScrollability}
         >
           <div
             className={cn(
@@ -141,14 +120,12 @@ export const Carousel = ({ items, initialScroll = 0 }: CarouselProps) => {
           <button
             className="relative z-40 h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center disabled:opacity-50"
             onClick={scrollLeft}
-            // disabled={!canScrollLeft}
           >
             <IconArrowNarrowLeft className="h-6 w-6 text-gray-500" />
           </button>
           <button
             className="relative z-40 h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center disabled:opacity-50"
             onClick={scrollRight}
-            // disabled={canScrollRight}
           >
             <IconArrowNarrowRight className="h-6 w-6 text-gray-500" />
           </button>
@@ -169,7 +146,12 @@ export const Card = ({
 }) => {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const { onCardClose, currentIndex } = useContext(CarouselContext);
+  const { onCardClose } = useContext(CarouselContext);
+
+  const handleClose = () => {
+    setOpen(false);
+    onCardClose(index);
+  };
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -186,17 +168,10 @@ export const Card = ({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open]);
-
-  // useOutsideClick(containerRef, () => handleClose());
+  }, [open, handleClose]); // Add `handleClose` to the dependency array
 
   const handleOpen = () => {
     setOpen(true);
-  };
-
-  const handleClose = () => {
-    setOpen(false);
-    onCardClose(index);
   };
 
   return (
