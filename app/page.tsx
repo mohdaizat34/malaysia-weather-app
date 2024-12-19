@@ -138,11 +138,15 @@ export default function Home() {
           className="w-full px-4 py-2 bg-gray-800 text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Select a location</option>
-          {locations.map((location) => (
-            <option key={location.location_id} value={location.location_id}>
-              {location.location_name}
-            </option>
-          ))}
+
+          {locations
+            .slice() // Create a shallow copy to avoid mutating the original array
+            .sort((a, b) => a.location_name.localeCompare(b.location_name))
+            .map((location) => (
+              <option key={location.location_id} value={location.location_id}>
+                {location.location_name}
+              </option>
+            ))}
         </select>
 
         <button
